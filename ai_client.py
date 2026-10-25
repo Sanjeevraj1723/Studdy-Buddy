@@ -1,25 +1,23 @@
 """Talks to the AI. Switch provider with AI_PROVIDER in your .env file."""
 import os
-from google import genai
-from google.genai import types
+import base64
+import google.generativeai as genai
 
-# Use the rock-solid model version
-PROVIDER="gemini"
-GEMINI_MODEL = "gemini-1.5-flash"
+# Setup provider variable
+PROVIDER = "gemini"
 
-# Force the stable v1 API version directly inside the client
-_client = genai.Client(
-    api_key=os.getenv("GEMINI_API_KEY"),
-    http_options={'api_version': 'v1'}
-)
+# Configure the API key using the standard library format
+genai.configure(api_key=os.getenv("GEMINI_API_KEY"))
 
+# Create the client object that the rest of your file uses
+_client = genai.GenerativeModel('gemini-1.5-flash')
 
 def generate(prompt, image_bytes=None, mime_type=None):
     """Return the AI's text answer. image_bytes is optional."""
     global _client
+    
     if PROVIDER == "claude":
         import anthropic
-
         if _client is None:
             _client = anthropic.Anthropic()  # reads ANTHROPIC_API_KEY
         content = []
@@ -34,23 +32,25 @@ def generate(prompt, image_bytes=None, mime_type=None):
             })
         content.append({"type": "text", "text": prompt})
         resp = _client.messages.create(
-            model=CLAUDE_MODEL,
+            model=os.getenv("CLAUDE_MODEL", "claude-3-5-sonnet-20241022"),
             max_tokens=1500,
             messages=[{"role": "user", "content": content}],
         )
         return "".join(b.text for b in resp.content if b.type == "text")
 
-    # default: Gemini through the google-genai SDK
-    from google import genai
-    from google.genai import types
-
-    if _client is None:
-        _client = genai.Client(api_key=os.getenv("GEMINI_API_KEY"))
-    parts = []
-    if image_bytes:
-        parts.append(types.Part.from_bytes(data=image_bytes, mime_type=mime_type))
-    parts.append(prompt)
-    resp = _client.models.generate_content(model=GEMINI_MODEL, contents=parts)
-    return resp.text or ""
-
-
+    # standard stable Gemini implementation using google-generativeai library
+    try:
+        if image_bytes:
+            # If an image doubt is submitted
+            response = _client.generate_content([
+                {'mime_type': mime_type, 'data': image_bytes},
+                prompt
+            ])
+        else:
+            # If it's a normal text doubt
+            response = _client.generate_content(prompt)
+            
+        return response.text or ""
+    except Exception as e:
+        print(f"AI Generation Error: {str(e)}")
+        return "The AI is busy right now. Please try again."
