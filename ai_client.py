@@ -1,12 +1,16 @@
 """Talks to the AI. Switch provider with AI_PROVIDER in your .env file."""
-import base64
 import os
+from google import genai
+from google.genai import types
 
-PROVIDER = os.getenv("AI_PROVIDER", "gemini").lower()
-GEMINI_MODEL = os.getenv("GEMINI_MODEL", "gemini-1.5-flash")
-CLAUDE_MODEL = os.getenv("CLAUDE_MODEL", "claude-sonnet-5-5")
+# Use the rock-solid model version
+GEMINI_MODEL = "gemini-1.5-flash"
 
-_client = None
+# Force the stable v1 API version directly inside the client
+_client = genai.Client(
+    api_key=os.getenv("GEMINI_API_KEY"),
+    http_options={'api_version': 'v1'}
+)
 
 
 def generate(prompt, image_bytes=None, mime_type=None):
