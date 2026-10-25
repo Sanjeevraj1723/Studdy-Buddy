@@ -3,7 +3,7 @@ import base64
 import os
 
 PROVIDER = os.getenv("AI_PROVIDER", "gemini").lower()
-GEMINI_MODEL = os.getenv("GEMINI_MODEL", "gemini-2.5-flash")
+GEMINI_MODEL = os.getenv("GEMINI_MODEL", "gemini-1.5-flash")
 CLAUDE_MODEL = os.getenv("CLAUDE_MODEL", "claude-sonnet-5-5")
 
 _client = None
