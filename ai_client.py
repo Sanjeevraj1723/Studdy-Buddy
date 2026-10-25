@@ -47,3 +47,5 @@ def generate(prompt, image_bytes=None, mime_type=None):
     parts.append(prompt)
     resp = _client.models.generate_content(model=GEMINI_MODEL, contents=parts)
     return resp.text or ""
+
+
