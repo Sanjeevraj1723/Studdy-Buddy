@@ -4,6 +4,7 @@ from google import genai
 from google.genai import types
 
 # Use the rock-solid model version
+PROVIDER="gemini"
 GEMINI_MODEL = "gemini-1.5-flash"
 
 # Force the stable v1 API version directly inside the client
