@@ -3,3 +3,4 @@ python-dotenv
 google-genai
 anthropic
 gunicorn
+google-generativeai
