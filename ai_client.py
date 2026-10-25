@@ -9,8 +9,10 @@ PROVIDER = "gemini"
 genai.configure(api_key=os.getenv("GEMINI_API_KEY"))
 
 # Create the standard text generation instance
-_client = genai.GenerativeModel('gemini-1.5-flash')
-
+_client = genai.GenerativeModel(
+    model_name='gemini-1.5-flash',
+    client=genai.Client(http_options={'api_version': 'v1'}) if hasattr(genai, 'Client') else None
+)
 def generate(prompt, image_bytes=None, mime_type=None):
     """Return the AI's text answer. Handles text and images seamlessly."""
     global _client
