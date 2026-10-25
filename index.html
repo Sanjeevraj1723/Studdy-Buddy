@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Study-Buddy: Doubt Solver, Timetable Maker and Study Cards for Students</title>
+<meta name="description" content="Study-Buddy helps school, college, JEE and NEET students solve doubts by text, image or voice, plan a timetable, make study cards and take quick warm-up breaks.">
+<link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+<header><h1>📚 Study-Buddy</h1><p>Doubts solved, time tables made, tired brains refreshed.</p></header>
+<nav id="tabs">
+<button class="on" data-t="doubt">💬 Doubt Solver</button>
+<button data-t="plan">🗓️ Timetable</button>
+<button data-t="warm">🧘 Warm-up</button>
+<button data-t="cards">🗂️ Study Cards</button>
+</nav>
+<main>
+<section id="doubt" class="on">
+<h2>Ask your doubt</h2>
+<div class="grid">
+<div><label for="lvl">I study in</label><select id="lvl"><option>School</option><option>College</option><option>JEE</option><option>NEET</option></select></div>
+<div><label for="lang">Answer language</label><select id="lang"><option>English</option><option>Tamil</option><option>Hindi</option></select></div>
+<div><label for="lev">Explain like</label><select id="lev"><option>Simple (beginner)</option><option>Normal</option><option>Detailed (advanced)</option></select></div>
+</div>
+<label for="q">Your doubt (rough wording is fine)</label>
+<textarea id="q" placeholder="Type, speak 🎤, or upload a photo of the question…"></textarea>
+<img id="prev" alt="Uploaded doubt preview">
+<div class="row">
+<button class="btn alt mic" id="mic" type="button">🎤 Speak</button>
+<label class="btn alt" style="margin:0;cursor:pointer">📷 Upload image<input id="img" type="file" accept="image/*" hidden></label>
+<button class="btn" id="ask" type="button">Solve my doubt</button>
+<button class="btn alt" id="say" type="button" hidden>🔊 Read aloud</button>
+</div>
+<p class="mu" id="note"></p>
+<div id="ans" aria-live="polite"></div>
+</section>
+
+<section id="plan">
+<h2>Timetable maker</h2>
+<label>Subjects (up to 8)</label>
+<div id="subs"></div>
+<div class="row"><button class="btn alt" id="addS" type="button">+ Add subject</button></div>
+<label>Study days</label>
+<div class="days" id="days"></div>
+<div class="grid">
+<div><label for="st">Start time</label><input id="st" type="time" value="17:00"></div>
+<div><label for="ln">Session (minutes)</label><input id="ln" type="number" min="15" max="180" value="45"></div>
+<div><label for="ns">Sessions per day</label><input id="ns" type="number" min="1" max="10" value="4"></div>
+</div>
+<div class="row"><button class="btn" id="gen" type="button">Create timetable</button><button class="btn alt" id="dl" type="button" hidden>⬇ Download</button></div>
+<div class="tw" id="tt"></div>
+</section>
+
+<section id="warm">
+<h2>Warm-up break</h2>
+<p class="mu">Feeling tired? Pick a quick reset.</p>
+<div class="card">
+<h3>🌬️ 1-minute breathing</h3>
+<div class="circle" id="circ">Ready</div>
+<div class="row" style="justify-content:center"><button class="btn" id="br" type="button">Start</button></div>
+</div>
+<div class="card">
+<h3>🤸 Stretch routine</h3>
+<div id="stre" style="font-size:1.2rem;font-weight:600">Press start</div>
+<div class="row"><button class="btn" id="sb" type="button">Start (6 × 20s)</button></div>
+</div>
+<div class="card">
+<h3>🧠 Quick brain teaser</h3>
+<div id="tz">Tap the button for a puzzle.</div>
+<div class="row"><button class="btn alt" id="tb" type="button">New teaser</button><button class="btn alt" id="tr" type="button" hidden>Show answer</button></div>
+</div>
+</section>
+<section id="cards">
+<h2>Study cards</h2>
+<div class="grid" style="grid-template-columns:1fr 1fr">
+<div><label for="cf">Front (question / term)</label><textarea id="cf" style="min-height:70px"></textarea></div>
+<div><label for="cb">Back (answer / meaning)</label><textarea id="cb" style="min-height:70px"></textarea></div>
+</div>
+<div class="row"><button class="btn" id="ca" type="button">+ Add card</button></div>
+<label for="ct">Or let AI make cards from a topic</label>
+<div class="row" style="margin-top:0"><input id="ct" placeholder="e.g. Newton's laws, Photosynthesis" style="flex:1;min-width:180px"><button class="btn alt" id="cg" type="button">✨ Generate 6 cards</button></div>
+<p class="mu" id="cn"></p>
+<div id="cs" hidden>
+<p class="mu" id="cc" style="text-align:center;margin-bottom:6px"></p>
+<div class="fc" id="fc" role="button" tabindex="0" aria-label="Flip card"></div>
+<div class="row" style="justify-content:center">
+<button class="btn alt" id="cp" type="button">◀ Prev</button>
+<button class="btn" id="cfl" type="button">Flip</button>
+<button class="btn alt" id="cx" type="button">Next ▶</button>
+</div>
+<div class="row" style="justify-content:center">
+<button class="btn alt" id="csh" type="button">🔀 Shuffle</button>
+<button class="btn alt" id="cd" type="button">🗑 Delete this card</button>
+</div>
+</div>
+</section>
+</main>
+<script src="{{ url_for('static', filename='app.js') }}"></script>
+</body>
+</html>
