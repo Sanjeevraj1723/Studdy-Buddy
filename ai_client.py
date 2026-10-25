@@ -54,3 +54,4 @@ def generate(prompt, image_bytes=None, mime_type=None):
     except Exception as e:
         print(f"AI Generation Error: {str(e)}")
         return "The AI is busy right now. Please try again."
+
