@@ -11,7 +11,7 @@ def generate(prompt, image_bytes=None, mime_type=None):
 
     # Completely separate path variables to avoid any text blending or missing slashes
     base_url = "https://googleapis.com"
-    endpoint = f"/v1/models/gemini-1.5-flash:generateContent?key={api_key}"
+    endpoint = f"/v1beta/models/gemini-2.5-flash:generateContent?key={api_key}"
     url = base_url + endpoint
     
     headers = {"Content-Type": "application/json"}
