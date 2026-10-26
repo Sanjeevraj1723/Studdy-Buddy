@@ -5,32 +5,42 @@ import requests
 
 PROVIDER = "gemini"
 
-BASE_URL = "https://generativelanguage.googleapis.com"
+BASE_URL = "https://generativelanguage.googleapis.com/v1beta/models"
+
+# Primary model first, backup model second
 MODELS = [
     "gemini-3.8-flash",
     "gemini-3.5-flash-lite",
 ]
 
+RETRYABLE_STATUS_CODES = {429, 500, 502, 503, 504}
+
 
 def generate(prompt, image_bytes=None, mime_type=None):
-    """Generate an answer with retries and a backup Gemini model."""
+    """Generate Study Buddy answers using Gemini with retries and fallback."""
 
     api_key = os.getenv("GEMINI_API_KEY")
 
     if not api_key:
-        print("GEMINI_API_KEY is missing from server settings.")
-        return "AI setup error. Please check server configuration."
+        print("Configuration error: GEMINI_API_KEY is missing.")
+        return "AI setup error. Please check the server configuration."
 
+    # Prepare the question and optional image
     parts = [{"text": str(prompt)}]
 
     if image_bytes:
-        image_b64 = base64.b64encode(image_bytes).decode("utf-8")
-        parts.append({
-            "inlineData": {
-                "mimeType": mime_type or "image/jpeg",
-                "data": image_b64,
-            }
-        })
+        try:
+            image_b64 = base64.b64encode(image_bytes).decode("utf-8")
+
+            parts.append({
+                "inlineData": {
+                    "mimeType": mime_type or "image/jpeg",
+                    "data": image_b64,
+                }
+            })
+        except Exception as exc:
+            print("Image preparation error:", type(exc).__name__)
+            return "Could not process that image. Please try another image."
 
     payload = {
         "contents": [{
@@ -44,8 +54,11 @@ def generate(prompt, image_bytes=None, mime_type=None):
         "x-goog-api-key": api_key,
     }
 
+    # Try the primary model and then the backup
     for model in MODELS:
-        url = f"{BASE_URL}/v1beta/models/{model}:generateContent"
+        url = f"{BASE_URL}/{model}:generateContent"
+
+        print(f"Trying Gemini model: {model}")
 
         for attempt in range(2):
             try:
@@ -53,11 +66,16 @@ def generate(prompt, image_bytes=None, mime_type=None):
                     url,
                     headers=headers,
                     json=payload,
-                    timeout=45,
+                    timeout=40,
                 )
 
                 if response.ok:
-                    data = response.json()
+                    try:
+                        data = response.json()
+                    except ValueError:
+                        print(f"{model}: response was not valid JSON.")
+                        break
+
                     candidates = data.get("candidates", [])
 
                     if candidates:
@@ -66,43 +84,68 @@ def generate(prompt, image_bytes=None, mime_type=None):
                         ).get("parts", [])
 
                         answer = "".join(
-                            part.get("text", "")
-                            for part in answer_parts
-                            if isinstance(part.get("text"), str)
+                            item.get("text", "")
+                            for item in answer_parts
+                            if isinstance(item.get("text"), str)
                         ).strip()
 
                         if answer:
+                            print(f"Gemini succeeded with {model}.")
                             return answer
 
-                    print("Gemini returned no usable answer.")
+                    print(f"{model}: no usable answer returned.")
                     break
 
-                print(
-                    f"Gemini model {model}: "
-                    f"HTTP {response.status_code}"
-                )
+                status = response.status_code
+                print(f"{model}: HTTP {status}")
 
-                if response.status_code not in (429, 500, 502, 503, 504):
-                    print("Gemini error:", response.text[:1000])
+                if status in RETRYABLE_STATUS_CODES:
+                    if attempt == 0:
+                        time.sleep(2)
+                        continue
+
+                    # After retrying, move to the backup model
+                    break
+
+                if status == 404:
+                    print(f"{model}: model unavailable; trying backup.")
+                    break
+
+                if status in (401, 403):
+                    print("Gemini API key or permission problem.")
                     return (
-                        f"Gemini API error ({response.status_code}). "
-                        "Please check server configuration and API access."
+                        "AI access error. Please check your Gemini API "
+                        "key and model permissions in server settings."
                     )
 
-                if attempt == 0:
-                    time.sleep(2)
+                print("Gemini error response:", response.text[:800])
+                return (
+                    f"Gemini API error ({status}). "
+                    "Please check the server logs."
+                )
 
             except requests.exceptions.Timeout:
-                print(f"Gemini timeout on model {model}.")
-                if attempt == 0:
-                    time.sleep(2)
+                print(f"{model}: request timed out.")
 
-            except (requests.exceptions.RequestException, ValueError) as exc:
-                print(f"Gemini request failed: {type(exc).__name__}")
                 if attempt == 0:
                     time.sleep(2)
+                    continue
+
+                break
+
+            except requests.exceptions.RequestException as exc:
+                print(f"{model}: connection error: {type(exc).__name__}")
+                break
+
+            except Exception as exc:
+                print(f"{model}: unexpected error: {type(exc).__name__}")
+                break
+
+    print("All configured Gemini models failed.")
 
     return (
-        "The AI services are temporarily busy. "
+        "The AI service is temporarily unavailable or busy. "
         "Please wait a little and try again."
     )
+                
+                
