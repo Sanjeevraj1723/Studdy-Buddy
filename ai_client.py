@@ -1,110 +1,108 @@
 import os
 import base64
+import time
 import requests
 
 PROVIDER = "gemini"
 
-# Gemini API configuration
 BASE_URL = "https://generativelanguage.googleapis.com"
-MODEL = "gemini-3.8-flash"
+MODELS = [
+    "gemini-3.8-flash",
+    "gemini-3.5-flash-lite",
+]
 
 
 def generate(prompt, image_bytes=None, mime_type=None):
-    """Generate a Study Buddy response using Google's Gemini API."""
+    """Generate an answer with retries and a backup Gemini model."""
 
     api_key = os.getenv("GEMINI_API_KEY")
 
     if not api_key:
-        print("Configuration error: GEMINI_API_KEY is missing.")
-        return "AI setup error. Please check the server configuration."
+        print("GEMINI_API_KEY is missing from server settings.")
+        return "AI setup error. Please check server configuration."
 
-    url = f"{BASE_URL}/v1beta/models/{MODEL}:generateContent"
+    parts = [{"text": str(prompt)}]
+
+    if image_bytes:
+        image_b64 = base64.b64encode(image_bytes).decode("utf-8")
+        parts.append({
+            "inlineData": {
+                "mimeType": mime_type or "image/jpeg",
+                "data": image_b64,
+            }
+        })
+
+    payload = {
+        "contents": [{
+            "role": "user",
+            "parts": parts,
+        }]
+    }
 
     headers = {
         "Content-Type": "application/json",
         "x-goog-api-key": api_key,
     }
 
-    parts = [{"text": str(prompt)}]
+    for model in MODELS:
+        url = f"{BASE_URL}/v1beta/models/{model}:generateContent"
 
-    # Include an image when one is provided
-    if image_bytes:
-        if not mime_type:
-            mime_type = "image/jpeg"
+        for attempt in range(2):
+            try:
+                response = requests.post(
+                    url,
+                    headers=headers,
+                    json=payload,
+                    timeout=45,
+                )
 
-        image_b64 = base64.b64encode(image_bytes).decode("utf-8")
+                if response.ok:
+                    data = response.json()
+                    candidates = data.get("candidates", [])
 
-        parts.append({
-            "inlineData": {
-                "mimeType": mime_type,
-                "data": image_b64,
-            }
-        })
+                    if candidates:
+                        answer_parts = candidates[0].get(
+                            "content", {}
+                        ).get("parts", [])
 
-    payload = {
-        "contents": [
-            {
-                "role": "user",
-                "parts": parts,
-            }
-        ]
-    }
+                        answer = "".join(
+                            part.get("text", "")
+                            for part in answer_parts
+                            if isinstance(part.get("text"), str)
+                        ).strip()
 
-    try:
-        response = requests.post(
-            url,
-            headers=headers,
-            json=payload,
-            timeout=45,
-        )
+                        if answer:
+                            return answer
 
-        # Check HTTP errors before trying to parse JSON
-        if not response.ok:
-            print("Gemini HTTP status:", response.status_code)
-            print("Gemini error response:", response.text[:1500])
-            return (
-                f"Gemini API error ({response.status_code}). "
-                "Please check the server logs."
-            )
+                    print("Gemini returned no usable answer.")
+                    break
 
-        # Safely parse the response
-        try:
-            data = response.json()
-        except ValueError:
-            print("Gemini returned a non-JSON response.")
-            print("Response:", response.text[:1000])
-            return "The AI returned an unexpected response. Please try again."
+                print(
+                    f"Gemini model {model}: "
+                    f"HTTP {response.status_code}"
+                )
 
-        # Check whether Gemini returned any usable text
-        candidates = data.get("candidates", [])
+                if response.status_code not in (429, 500, 502, 503, 504):
+                    print("Gemini error:", response.text[:1000])
+                    return (
+                        f"Gemini API error ({response.status_code}). "
+                        "Please check server configuration and API access."
+                    )
 
-        if not candidates:
-            print("Gemini returned no candidates:", str(data)[:1500])
-            return "The AI could not generate an answer. Please try again."
+                if attempt == 0:
+                    time.sleep(2)
 
-        content = candidates[0].get("content", {})
-        response_parts = content.get("parts", [])
+            except requests.exceptions.Timeout:
+                print(f"Gemini timeout on model {model}.")
+                if attempt == 0:
+                    time.sleep(2)
 
-        answer = "".join(
-            part.get("text", "")
-            for part in response_parts
-            if isinstance(part.get("text"), str)
-        ).strip()
+            except (requests.exceptions.RequestException, ValueError) as exc:
+                print(f"Gemini request failed: {type(exc).__name__}")
+                if attempt == 0:
+                    time.sleep(2)
 
-        if answer:
-            return answer
-
-        print("Gemini response contained no text:", str(data)[:1500])
-        return "The AI returned no text. Please try another question."
-
-    except requests.exceptions.Timeout:
-        print("Gemini request timed out.")
-        return "The AI took too long to respond. Please try again."
-
-    except requests.exceptions.RequestException as exc:
-        print("Gemini connection error:", repr(exc))
-        return "Could not connect to the AI service. Please try again."
-
-    except Exception as exc:
-        print("Unexpected AI client error:", repr(exc))
-        return "Something went wrong while generating the answer."
+    return (
+        "The AI services are temporarily busy. "
+        "Please wait a little and try again."
+    )
