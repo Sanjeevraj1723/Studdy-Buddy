@@ -1,4 +1,15 @@
 const $=id=>document.getElementById(id);
+async function readJSON(response) {
+  const text = await response.text();
+
+  try {
+    return JSON.parse(text);
+  } catch {
+    throw new Error(
+      `The server returned an unexpected response (HTTP ${response.status}). Please try again.`
+    );
+  }
+}
 document.querySelectorAll('#tabs button').forEach(b=>b.onclick=()=>{
   document.querySelectorAll('#tabs button,section').forEach(e=>e.classList.remove('on'));
   b.classList.add('on');$(b.dataset.t).classList.add('on');
@@ -39,7 +50,7 @@ $('ask').onclick=async()=>{
   if(imgFile)fd.append('image',imgFile);
   try{
     const r=await fetch('/api/ask',{method:'POST',body:fd});
-    const d=await r.json();
+    const d=await readJSON(r);
     if(!r.ok)throw new Error(d.error||'Something went wrong.');
     lastAns=d.answer;a.textContent=d.answer;$('say').hidden=false;
   }catch(e){a.textContent=e.message||'Could not get an answer. Please try again.'}
@@ -145,7 +156,7 @@ $('cg').onclick=async()=>{
   $('cg').disabled=true;$('cn').textContent='Making cards…';
   try{
     const r=await fetch('/api/cards',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({topic:t,level:$('lvl').value})});
-    const d=await r.json();
+    const d=await readJSON(r);
     if(!r.ok)throw new Error(d.error||'Could not make cards.');
     const ok=(d.cards||[]).filter(x=>x&&x.f&&x.b).map(x=>({f:String(x.f),b:String(x.b)}));
     if(!ok.length)throw new Error('Could not make cards. Please try again.');
