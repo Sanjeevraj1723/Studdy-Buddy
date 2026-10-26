@@ -6,7 +6,7 @@ PROVIDER = "gemini"
 
 # Gemini API configuration
 BASE_URL = "https://generativelanguage.googleapis.com"
-MODEL = "gemini-2.5-flash"
+MODEL = "gemini-3.8-flash"
 
 
 def generate(prompt, image_bytes=None, mime_type=None):
