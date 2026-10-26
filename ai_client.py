@@ -32,3 +32,4 @@ def generate(prompt, image_bytes=None, mime_type=None):
     except Exception as e:
         print(f"Internal API Connection Error: {str(e)}")
         return "The AI is busy right now. Please try again."
+
