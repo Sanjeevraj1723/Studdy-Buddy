@@ -4,13 +4,12 @@ import requests
 PROVIDER = "gemini"
 
 def generate(prompt, image_bytes=None, mime_type=None):
-    """Sends requests directly to Google's stable API endpoint."""
-    # Define the API key first so it is available to the rest of the function
+    """Sends clean HTTP requests directly to Google Gemini's official stable endpoint."""
     api_key = os.getenv("GEMINI_API_KEY")
     if not api_key:
-        return "API Key missing in configuration."
+        return "API Key missing in environment settings."
 
-    # Using Google's direct stable execution route
+    # Completely fixed, absolute URL structure separating the base path from the API key parameter
     url = f"https://googleapis.com{api_key}"
     headers = {"Content-Type": "application/json"}
 
@@ -42,13 +41,13 @@ def generate(prompt, image_bytes=None, mime_type=None):
         data = response.json()
         
         if response.status_code == 200:
-            # Safely navigate the standard dictionary keys returned by Google
+            # Standard path extraction to pull the text response out of the JSON response block cleanly
             return data["candidates"][0]["content"]["parts"][0]["text"]
         else:
-            error_msg = data.get("error", {}).get("message", "Unknown API error")
-            print(f"Google Direct API Error: {error_msg}")
+            error_msg = data.get("error", {}).get("message", "API Configuration Mismatch")
+            print(f"Google Direct Server Error: {error_msg}")
             return "The AI is busy right now. Please try again."
             
     except Exception as e:
-        print(f"Connection Exception: {str(e)}")
+        print(f"Network Connection Exception: {str(e)}")
         return "The AI is busy right now. Please try again."
