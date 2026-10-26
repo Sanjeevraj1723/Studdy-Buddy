@@ -9,8 +9,11 @@ def generate(prompt, image_bytes=None, mime_type=None):
     if not api_key:
         return "API Key missing in environment settings."
 
-    # Completely fixed, absolute URL structure separating the base path from the API key parameter
-    url = f"https://googleapis.com{api_key}"
+    # Completely separate path variables to avoid any text blending or missing slashes
+    base_url = "https://googleapis.com"
+    endpoint = f"/v1/models/gemini-1.5-flash:generateContent?key={api_key}"
+    url = base_url + endpoint
+    
     headers = {"Content-Type": "application/json"}
 
     if image_bytes:
@@ -41,7 +44,6 @@ def generate(prompt, image_bytes=None, mime_type=None):
         data = response.json()
         
         if response.status_code == 200:
-            # Standard path extraction to pull the text response out of the JSON response block cleanly
             return data["candidates"][0]["content"]["parts"][0]["text"]
         else:
             error_msg = data.get("error", {}).get("message", "API Configuration Mismatch")
